@@ -176,6 +176,29 @@ function App() {
   const btnClass = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition text-white shadow-lg";
   const cardClass = "bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-2 relative mb-2";
 
+  const downloadReportCard = async (studentId, admissionNo) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/students/${studentId}/report-card/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Report_Card_${admissionNo}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        alert("Failed to download report card.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -319,6 +342,7 @@ function App() {
               <p className="text-slate-400 text-sm">Classroom ID: {s.classroom || 'Unassigned'}</p>
               <div className="absolute bottom-4 right-4 flex gap-2">
                 <button onClick={() => startEdit('students', s)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
+                <button onClick={() => downloadReportCard(s.id, s.admission_no)} className="bg-cyan-900/30 text-cyan-400 hover:bg-cyan-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">PDF</button>
                 <button onClick={() => deleteItem('students', s.id, () => fetchData('students', setStudents))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
               </div>
             </div>
