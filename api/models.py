@@ -20,10 +20,25 @@ class Teacher(models.Model):
 class Student(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    admission_no = models.CharField(max_length=20, unique=True)
+    admission_no = models.CharField(max_length=20, unique=True, blank=True) # <-- Added blank=True
     date_of_birth = models.DateField()
-    # This links the student to a specific class
     classroom = models.ForeignKey(ClassRoom, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # If this is a new student and no admission_no is provided
+        if not self.admission_no:
+            # 1. Count how many students exist
+            last_student = Student.objects.all().order_by('id').last()
+            if not last_student:
+                # If no students exist, start at ADM001
+                self.admission_no = 'ADM001'
+            else:
+                # 2. Extract the number from the last admission_no, add 1, and format it
+                last_id = int(last_student.admission_no.replace('ADM', ''))
+                new_id = last_id + 1
+                self.admission_no = f'ADM{new_id:03d}' # format as ADM002, ADM003, etc.
+        
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.admission_no})"
