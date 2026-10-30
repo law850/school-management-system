@@ -10,6 +10,7 @@ function App() {
   const [students, setStudents] = useState([])
   const [teachers, setTeachers] = useState([])
   const [classrooms, setClassrooms] = useState([])
+  const [attendance, setAttendance] = useState([])
 
   // --- EDIT STATE ---
   const [editId, setEditId] = useState(null) 
@@ -28,6 +29,11 @@ function App() {
 
   const [cName, setCName] = useState('')
   const [cSection, setCSection] = useState('')
+
+  // Attendance Form states
+  const [attStudent, setAttStudent] = useState('')
+  const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]) // Default to today
+  const [attStatus, setAttStatus] = useState('Present')
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -65,33 +71,39 @@ function App() {
       if (activeTab === 'students') fetchData('students', setStudents);
       if (activeTab === 'teachers') fetchData('teachers', setTeachers);
       if (activeTab === 'classrooms') fetchData('classrooms', setClassrooms);
-      setEditId(null); // Clear edit mode when switching tabs
+      if (activeTab === 'attendance') {
+        fetchData('attendance', setAttendance);
+        fetchData('students', setStudents); // We need students for the dropdown!
+      }
+      setEditId(null); 
     }
   }, [token, activeTab]);
 
-  // --- ADD OR UPDATE FUNCTION ---
   const handleSubmit = async (e, endpoint, payload, resetFunc, fetchFunc) => {
     e.preventDefault();
     
-    // If editId exists, we are updating (PUT). Otherwise, we are creating (POST).
     const url = editId 
       ? `http://127.0.0.1:8000/api/${endpoint}/${editId}/` 
       : `http://127.0.0.1:8000/api/${endpoint}/`;
       
     const method = editId ? 'PUT' : 'POST';
 
-    await fetch(url, {
+    const res = await fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(payload)
     });
     
-    setEditId(null); // Exit edit mode
+    if (!res.ok) {
+      alert("Error saving data. Check if you entered a valid Classroom ID.");
+      return;
+    }
+
+    setEditId(null); 
     resetFunc();
     fetchFunc();
   };
 
-  // --- POPULATE FORM FOR EDITING ---
   const startEdit = (type, item) => {
     setEditId(item.id);
     if (type === 'students') {
@@ -116,6 +128,7 @@ function App() {
     setFirstName(''); setLastName(''); setDob(''); setClassroom('');
     setTFirstName(''); setTLastName(''); setTEmail(''); setTPhone(''); setTSubject('');
     setCName(''); setCSection('');
+    setAttStudent(''); setAttStatus('Present');
   };
 
   const deleteItem = async (endpoint, id, fetchFunc) => {
@@ -160,7 +173,7 @@ function App() {
       </header>
 
       <div className="flex gap-4 mb-8 bg-slate-800/50 p-2 rounded-xl w-max border border-slate-700">
-        {['students', 'teachers', 'classrooms'].map(tab => (
+        {['students', 'teachers', 'classrooms', 'attendance'].map(tab => (
           <button 
             key={tab}
             className={`px-6 py-2 rounded-lg capitalize font-medium transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
@@ -176,7 +189,7 @@ function App() {
         {/* Forms */}
         <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl h-max">
           <h3 className="text-2xl font-bold mb-6 text-indigo-300 capitalize">
-            {editId ? `Edit ${activeTab.slice(0, -1)}` : `Add New ${activeTab.slice(0, -1)}`}
+            {editId ? `Edit ${activeTab.slice(0, -1)}` : activeTab === 'attendance' ? 'Record Attendance' : `Add New ${activeTab.slice(0, -1)}`}
           </h3>
           
           {activeTab === 'students' && (
@@ -214,6 +227,28 @@ function App() {
                 <button type="submit" className={btnClass}>{editId ? 'Update Classroom' : 'Add Classroom'}</button>
                 {editId && <button type="button" onClick={cancelEdit} className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition text-white">Cancel</button>}
               </div>
+            </form>
+          )}
+
+          {/* ATTENDANCE FORM */}
+          {activeTab === 'attendance' && (
+            <form onSubmit={(e) => handleSubmit(e, 'attendance', { student: parseInt(attStudent), date: attDate, status: attStatus }, () => { setAttStudent(''); setAttStatus('Present'); }, () => fetchData('attendance', setAttendance))} className="flex flex-col gap-4">
+              <select className={inputClass} value={attStudent} onChange={e => setAttStudent(e.target.value)} required>
+                <option value="">Select Student...</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.admission_no})</option>
+                ))}
+              </select>
+              
+              <input type="date" className={inputClass} value={attDate} onChange={e => setAttDate(e.target.value)} required />
+              
+              <select className={inputClass} value={attStatus} onChange={e => setAttStatus(e.target.value)} required>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
+              </select>
+
+              <button type="submit" className={btnClass}>Record Attendance</button>
             </form>
           )}
         </div>
@@ -257,6 +292,28 @@ function App() {
               <div className="absolute bottom-4 right-4 flex gap-2">
                 <button onClick={() => startEdit('classrooms', c)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
                 <button onClick={() => deleteItem('classrooms', c.id, () => fetchData('classrooms', setClassrooms))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              </div>
+            </div>
+          ))}
+
+          {/* ATTENDANCE LIST */}
+          {activeTab === 'attendance' && attendance.map(a => (
+            <div key={a.id} className={cardClass}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-white">{a.student_name}</h3>
+                  <p className="text-slate-400 text-sm">Date: {a.date}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                  a.status === 'Present' ? 'bg-green-900/50 text-green-300 border-green-700' : 
+                  a.status === 'Absent' ? 'bg-red-900/50 text-red-300 border-red-700' : 
+                  'bg-yellow-900/50 text-yellow-300 border-yellow-700'
+                }`}>
+                  {a.status}
+                </span>
+              </div>
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button onClick={() => deleteItem('attendance', a.id, () => fetchData('attendance', setAttendance))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
               </div>
             </div>
           ))}
