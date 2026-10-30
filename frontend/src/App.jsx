@@ -11,6 +11,9 @@ function App() {
   const [teachers, setTeachers] = useState([])
   const [classrooms, setClassrooms] = useState([])
 
+  // --- EDIT STATE ---
+  const [editId, setEditId] = useState(null) 
+
   // Form states
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -62,21 +65,59 @@ function App() {
       if (activeTab === 'students') fetchData('students', setStudents);
       if (activeTab === 'teachers') fetchData('teachers', setTeachers);
       if (activeTab === 'classrooms') fetchData('classrooms', setClassrooms);
+      setEditId(null); // Clear edit mode when switching tabs
     }
   }, [token, activeTab]);
 
-  const addItem = async (e, endpoint, payload, resetFunc, fetchFunc) => {
+  // --- ADD OR UPDATE FUNCTION ---
+  const handleSubmit = async (e, endpoint, payload, resetFunc, fetchFunc) => {
     e.preventDefault();
-    await fetch(`http://127.0.0.1:8000/api/${endpoint}/`, {
-      method: 'POST',
+    
+    // If editId exists, we are updating (PUT). Otherwise, we are creating (POST).
+    const url = editId 
+      ? `http://127.0.0.1:8000/api/${endpoint}/${editId}/` 
+      : `http://127.0.0.1:8000/api/${endpoint}/`;
+      
+    const method = editId ? 'PUT' : 'POST';
+
+    await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(payload)
     });
+    
+    setEditId(null); // Exit edit mode
     resetFunc();
     fetchFunc();
   };
 
-  // RESTORED: Delete Function
+  // --- POPULATE FORM FOR EDITING ---
+  const startEdit = (type, item) => {
+    setEditId(item.id);
+    if (type === 'students') {
+      setFirstName(item.first_name);
+      setLastName(item.last_name);
+      setDob(item.date_of_birth);
+      setClassroom(item.classroom || '');
+    } else if (type === 'teachers') {
+      setTFirstName(item.first_name);
+      setTLastName(item.last_name);
+      setTEmail(item.email);
+      setTPhone(item.phone);
+      setTSubject(item.subject_specialty);
+    } else if (type === 'classrooms') {
+      setCName(item.name);
+      setCSection(item.section);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setFirstName(''); setLastName(''); setDob(''); setClassroom('');
+    setTFirstName(''); setTLastName(''); setTEmail(''); setTPhone(''); setTSubject('');
+    setCName(''); setCSection('');
+  };
+
   const deleteItem = async (endpoint, id, fetchFunc) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
     try {
@@ -111,7 +152,6 @@ function App() {
 
   return (
     <div className="min-h-screen p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
         <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
           School Dashboard
@@ -119,57 +159,66 @@ function App() {
         <button onClick={handleLogout} className="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-medium transition text-white">Logout</button>
       </header>
 
-      {/* Tabs */}
       <div className="flex gap-4 mb-8 bg-slate-800/50 p-2 rounded-xl w-max border border-slate-700">
         {['students', 'teachers', 'classrooms'].map(tab => (
           <button 
             key={tab}
             className={`px-6 py-2 rounded-lg capitalize font-medium transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => { setActiveTab(tab); cancelEdit(); }}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Content Area */}
       <div className="grid md:grid-cols-2 gap-8">
         
-        {/* Left Column: Forms */}
+        {/* Forms */}
         <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl h-max">
-          <h3 className="text-2xl font-bold mb-6 text-indigo-300 capitalize">Add New {activeTab.slice(0, -1)}</h3>
+          <h3 className="text-2xl font-bold mb-6 text-indigo-300 capitalize">
+            {editId ? `Edit ${activeTab.slice(0, -1)}` : `Add New ${activeTab.slice(0, -1)}`}
+          </h3>
           
           {activeTab === 'students' && (
-            <form onSubmit={(e) => addItem(e, 'students', { first_name: firstName, last_name: lastName, date_of_birth: dob, classroom: classroom ? parseInt(classroom) : null }, () => { setFirstName(''); setLastName(''); setDob(''); setClassroom(''); }, () => fetchData('students', setStudents))} className="flex flex-col gap-4">
+            <form onSubmit={(e) => handleSubmit(e, 'students', { first_name: firstName, last_name: lastName, date_of_birth: dob, classroom: classroom ? parseInt(classroom) : null }, () => { setFirstName(''); setLastName(''); setDob(''); setClassroom(''); }, () => fetchData('students', setStudents))} className="flex flex-col gap-4">
               <input type="text" placeholder="First Name" className={inputClass} value={firstName} onChange={e => setFirstName(e.target.value)} required />
               <input type="text" placeholder="Last Name" className={inputClass} value={lastName} onChange={e => setLastName(e.target.value)} required />
               <input type="date" className={inputClass} value={dob} onChange={e => setDob(e.target.value)} required />
               <input type="number" placeholder="Classroom ID" className={inputClass} value={classroom} onChange={e => setClassroom(e.target.value)} />
-              <button type="submit" className={btnClass}>Add Student</button>
+              <div className="flex gap-2">
+                <button type="submit" className={btnClass}>{editId ? 'Update Student' : 'Add Student'}</button>
+                {editId && <button type="button" onClick={cancelEdit} className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition text-white">Cancel</button>}
+              </div>
             </form>
           )}
 
           {activeTab === 'teachers' && (
-            <form onSubmit={(e) => addItem(e, 'teachers', { first_name: tFirstName, last_name: tLastName, email: tEmail, phone: tPhone, subject_specialty: tSubject }, () => { setTFirstName(''); setTLastName(''); setTEmail(''); setTPhone(''); setTSubject(''); }, () => fetchData('teachers', setTeachers))} className="flex flex-col gap-4">
+            <form onSubmit={(e) => handleSubmit(e, 'teachers', { first_name: tFirstName, last_name: tLastName, email: tEmail, phone: tPhone, subject_specialty: tSubject }, () => { setTFirstName(''); setTLastName(''); setTEmail(''); setTPhone(''); setTSubject(''); }, () => fetchData('teachers', setTeachers))} className="flex flex-col gap-4">
               <input type="text" placeholder="First Name" className={inputClass} value={tFirstName} onChange={e => setTFirstName(e.target.value)} required />
               <input type="text" placeholder="Last Name" className={inputClass} value={tLastName} onChange={e => setTLastName(e.target.value)} required />
               <input type="email" placeholder="Email" className={inputClass} value={tEmail} onChange={e => setTEmail(e.target.value)} required />
               <input type="text" placeholder="Phone" className={inputClass} value={tPhone} onChange={e => setTPhone(e.target.value)} required />
               <input type="text" placeholder="Subject Specialty" className={inputClass} value={tSubject} onChange={e => setTSubject(e.target.value)} required />
-              <button type="submit" className={btnClass}>Add Teacher</button>
+              <div className="flex gap-2">
+                <button type="submit" className={btnClass}>{editId ? 'Update Teacher' : 'Add Teacher'}</button>
+                {editId && <button type="button" onClick={cancelEdit} className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition text-white">Cancel</button>}
+              </div>
             </form>
           )}
 
           {activeTab === 'classrooms' && (
-            <form onSubmit={(e) => addItem(e, 'classrooms', { name: cName, section: cSection }, () => { setCName(''); setCSection(''); }, () => fetchData('classrooms', setClassrooms))} className="flex flex-col gap-4">
+            <form onSubmit={(e) => handleSubmit(e, 'classrooms', { name: cName, section: cSection }, () => { setCName(''); setCSection(''); }, () => fetchData('classrooms', setClassrooms))} className="flex flex-col gap-4">
               <input type="text" placeholder="Class Name (e.g. Form 1)" className={inputClass} value={cName} onChange={e => setCName(e.target.value)} required />
               <input type="text" placeholder="Section (e.g. A)" className={inputClass} value={cSection} onChange={e => setCSection(e.target.value)} required />
-              <button type="submit" className={btnClass}>Add Classroom</button>
+              <div className="flex gap-2">
+                <button type="submit" className={btnClass}>{editId ? 'Update Classroom' : 'Add Classroom'}</button>
+                {editId && <button type="button" onClick={cancelEdit} className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition text-white">Cancel</button>}
+              </div>
             </form>
           )}
         </div>
 
-        {/* Right Column: Lists */}
+        {/* Lists */}
         <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2">
           
           {activeTab === 'students' && students.map(s => (
@@ -179,7 +228,10 @@ function App() {
                 <span className="bg-indigo-900/50 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold border border-indigo-700">{s.admission_no}</span>
               </div>
               <p className="text-slate-400 text-sm">Classroom ID: {s.classroom || 'Unassigned'}</p>
-              <button onClick={() => deleteItem('students', s.id, () => fetchData('students', setStudents))} className="absolute bottom-4 right-4 bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button onClick={() => startEdit('students', s)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
+                <button onClick={() => deleteItem('students', s.id, () => fetchData('students', setStudents))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              </div>
             </div>
           ))}
 
@@ -189,7 +241,10 @@ function App() {
               <p className="text-indigo-400 text-sm font-medium">{t.subject_specialty}</p>
               <p className="text-slate-400 text-sm">📧 {t.email}</p>
               <p className="text-slate-400 text-sm">📞 {t.phone}</p>
-              <button onClick={() => deleteItem('teachers', t.id, () => fetchData('teachers', setTeachers))} className="absolute bottom-4 right-4 bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button onClick={() => startEdit('teachers', t)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
+                <button onClick={() => deleteItem('teachers', t.id, () => fetchData('teachers', setTeachers))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              </div>
             </div>
           ))}
 
@@ -199,7 +254,10 @@ function App() {
                 <h3 className="text-xl font-bold text-white">{c.name} - {c.section}</h3>
                 <span className="text-slate-500 text-xs">ID: {c.id}</span>
               </div>
-              <button onClick={() => deleteItem('classrooms', c.id, () => fetchData('classrooms', setClassrooms))} className="absolute bottom-4 right-4 bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button onClick={() => startEdit('classrooms', c)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
+                <button onClick={() => deleteItem('classrooms', c.id, () => fetchData('classrooms', setClassrooms))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              </div>
             </div>
           ))}
 
