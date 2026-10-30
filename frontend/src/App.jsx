@@ -147,6 +147,18 @@ function App() {
   const btnClass = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition text-white shadow-lg";
   const cardClass = "bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-2 relative";
 
+  // Calculate stats for the dashboard
+  const totalStudents = students.length;
+  const totalTeachers = teachers.length;
+  const totalClassrooms = classrooms.length;
+  const totalAttendance = attendance.length;
+
+  // Calculate today's attendance percentage
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayAttendance = attendance.filter(a => a.date === todayStr);
+  const presentToday = todayAttendance.filter(a => a.status === 'Present').length;
+  const attendanceRate = todayAttendance.length > 0 ? Math.round((presentToday / todayAttendance.length) * 100) : 0;
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -173,7 +185,7 @@ function App() {
       </header>
 
       <div className="flex gap-4 mb-8 bg-slate-800/50 p-2 rounded-xl w-max border border-slate-700">
-        {['students', 'teachers', 'classrooms', 'attendance'].map(tab => (
+        {['dashboard', 'students', 'teachers', 'classrooms', 'attendance'].map(tab => (
           <button 
             key={tab}
             className={`px-6 py-2 rounded-lg capitalize font-medium transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
@@ -185,12 +197,60 @@ function App() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
+                {/* DASHBOARD TAB */}
+        {activeTab === 'dashboard' && (
+          <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Students</h4>
+              <span className="text-5xl font-extrabold text-indigo-400">{totalStudents}</span>
+            </div>
+            
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Teachers</h4>
+              <span className="text-5xl font-extrabold text-cyan-400">{totalTeachers}</span>
+            </div>
+            
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Classrooms</h4>
+              <span className="text-5xl font-extrabold text-emerald-400">{totalClassrooms}</span>
+            </div>
+            
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Present Today</h4>
+              <span className="text-5xl font-extrabold text-amber-400">{attendanceRate}%</span>
+            </div>
+          </div>
+        )}
         
         {/* Forms */}
-        <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl h-max">
+        <div className={`bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl h-max ${activeTab === 'dashboard' ? 'hidden' : ''}`}>
           <h3 className="text-2xl font-bold mb-6 text-indigo-300 capitalize">
             {editId ? `Edit ${activeTab.slice(0, -1)}` : activeTab === 'attendance' ? 'Record Attendance' : `Add New ${activeTab.slice(0, -1)}`}
           </h3>
+                    {/* DASHBOARD TAB CONTENT */}
+          {activeTab === 'dashboard' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
+                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Students</h4>
+                <span className="text-5xl font-extrabold text-indigo-400">{totalStudents}</span>
+              </div>
+              
+              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
+                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Teachers</h4>
+                <span className="text-5xl font-extrabold text-cyan-400">{totalTeachers}</span>
+              </div>
+              
+              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
+                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Classrooms</h4>
+                <span className="text-5xl font-extrabold text-emerald-400">{totalClassrooms}</span>
+              </div>
+              
+              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
+                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Present Today</h4>
+                <span className="text-5xl font-extrabold text-amber-400">{attendanceRate}%</span>
+              </div>
+            </div>
+          )}
           
           {activeTab === 'students' && (
             <form onSubmit={(e) => handleSubmit(e, 'students', { first_name: firstName, last_name: lastName, date_of_birth: dob, classroom: classroom ? parseInt(classroom) : null }, () => { setFirstName(''); setLastName(''); setDob(''); setClassroom(''); }, () => fetchData('students', setStudents))} className="flex flex-col gap-4">
@@ -254,7 +314,7 @@ function App() {
         </div>
 
         {/* Lists */}
-        <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div className={`flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2 ${activeTab === 'dashboard' ? 'hidden' : ''}`}>
           
           {activeTab === 'students' && students.map(s => (
             <div key={s.id} className={cardClass}>
