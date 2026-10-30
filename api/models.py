@@ -42,7 +42,6 @@ class Student(models.Model):
         return f"{self.first_name} {self.last_name} ({self.admission_no})"
 
 
-# Notice how this is OUTSIDE the Student class, and starts at the far left.
 class Attendance(models.Model):
     STATUS_CHOICES = (
         ('Present', 'Present'),
@@ -59,3 +58,29 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student.first_name} - {self.date} - {self.status}"
+
+
+class Subject(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=10, unique=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class Grade(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    score = models.DecimalField(max_digits=5, decimal_places=2)
+    term = models.CharField(max_length=20, default='Term 1')
+
+    def __str__(self):
+        return f"{self.student.first_name} - {self.subject.name} - {self.score}"
+
+    @property
+    def letter_grade(self):
+        if self.score >= 80: return 'A'
+        elif self.score >= 70: return 'B'
+        elif self.score >= 60: return 'C'
+        elif self.score >= 50: return 'D'
+        else: return 'F'

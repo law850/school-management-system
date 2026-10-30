@@ -5,35 +5,50 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState('students')
+  const [activeTab, setActiveTab] = useState('dashboard')
 
+  // Data States
   const [students, setStudents] = useState([])
   const [teachers, setTeachers] = useState([])
   const [classrooms, setClassrooms] = useState([])
   const [attendance, setAttendance] = useState([])
+  const [subjects, setSubjects] = useState([])
+  const [grades, setGrades] = useState([])
 
-  // --- EDIT STATE ---
+  // Edit State
   const [editId, setEditId] = useState(null) 
 
-  // Form states
+  // Form States (Students)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [dob, setDob] = useState('')
   const [classroom, setClassroom] = useState('')
 
+  // Form States (Teachers)
   const [tFirstName, setTFirstName] = useState('')
   const [tLastName, setTLastName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [tPhone, setTPhone] = useState('')
   const [tSubject, setTSubject] = useState('')
 
+  // Form States (Classrooms)
   const [cName, setCName] = useState('')
   const [cSection, setCSection] = useState('')
 
-  // Attendance Form states
+  // Form States (Attendance)
   const [attStudent, setAttStudent] = useState('')
-  const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]) // Default to today
+  const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0])
   const [attStatus, setAttStatus] = useState('Present')
+
+  // Form States (Subjects)
+  const [subName, setSubName] = useState('')
+  const [subCode, setSubCode] = useState('')
+
+  // Form States (Grades)
+  const [gStudent, setGStudent] = useState('')
+  const [gSubject, setGSubject] = useState('')
+  const [gScore, setGScore] = useState('')
+  const [gTerm, setGTerm] = useState('Term 1')
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,7 +88,19 @@ function App() {
       if (activeTab === 'classrooms') fetchData('classrooms', setClassrooms);
       if (activeTab === 'attendance') {
         fetchData('attendance', setAttendance);
-        fetchData('students', setStudents); // We need students for the dropdown!
+        fetchData('students', setStudents); 
+      }
+      if (activeTab === 'subjects') fetchData('subjects', setSubjects);
+      if (activeTab === 'grades') {
+        fetchData('grades', setGrades);
+        fetchData('students', setStudents); 
+        fetchData('subjects', setSubjects);
+      }
+      if (activeTab === 'dashboard') {
+        fetchData('students', setStudents);
+        fetchData('teachers', setTeachers);
+        fetchData('classrooms', setClassrooms);
+        fetchData('attendance', setAttendance);
       }
       setEditId(null); 
     }
@@ -81,11 +108,9 @@ function App() {
 
   const handleSubmit = async (e, endpoint, payload, resetFunc, fetchFunc) => {
     e.preventDefault();
-    
     const url = editId 
       ? `http://127.0.0.1:8000/api/${endpoint}/${editId}/` 
       : `http://127.0.0.1:8000/api/${endpoint}/`;
-      
     const method = editId ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
@@ -95,10 +120,9 @@ function App() {
     });
     
     if (!res.ok) {
-      alert("Error saving data. Check if you entered a valid Classroom ID.");
+      alert("Error saving data. Check your inputs.");
       return;
     }
-
     setEditId(null); 
     resetFunc();
     fetchFunc();
@@ -107,19 +131,13 @@ function App() {
   const startEdit = (type, item) => {
     setEditId(item.id);
     if (type === 'students') {
-      setFirstName(item.first_name);
-      setLastName(item.last_name);
-      setDob(item.date_of_birth);
-      setClassroom(item.classroom || '');
+      setFirstName(item.first_name); setLastName(item.last_name); setDob(item.date_of_birth); setClassroom(item.classroom || '');
     } else if (type === 'teachers') {
-      setTFirstName(item.first_name);
-      setTLastName(item.last_name);
-      setTEmail(item.email);
-      setTPhone(item.phone);
-      setTSubject(item.subject_specialty);
+      setTFirstName(item.first_name); setTLastName(item.last_name); setTEmail(item.email); setTPhone(item.phone); setTSubject(item.subject_specialty);
     } else if (type === 'classrooms') {
-      setCName(item.name);
-      setCSection(item.section);
+      setCName(item.name); setCSection(item.section);
+    } else if (type === 'subjects') {
+      setSubName(item.name); setSubCode(item.code);
     }
   };
 
@@ -129,6 +147,8 @@ function App() {
     setTFirstName(''); setTLastName(''); setTEmail(''); setTPhone(''); setTSubject('');
     setCName(''); setCSection('');
     setAttStudent(''); setAttStatus('Present');
+    setSubName(''); setSubCode('');
+    setGStudent(''); setGSubject(''); setGScore(''); setGTerm('Term 1');
   };
 
   const deleteItem = async (endpoint, id, fetchFunc) => {
@@ -142,22 +162,19 @@ function App() {
     } catch (err) { console.error(err); }
   };
 
-  // Modern UI Classes
-  const inputClass = "w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 transition text-white";
-  const btnClass = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition text-white shadow-lg";
-  const cardClass = "bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-2 relative";
-
-  // Calculate stats for the dashboard
+  // Dashboard Stats
   const totalStudents = students.length;
   const totalTeachers = teachers.length;
   const totalClassrooms = classrooms.length;
-  const totalAttendance = attendance.length;
-
-  // Calculate today's attendance percentage
   const todayStr = new Date().toISOString().split('T')[0];
   const todayAttendance = attendance.filter(a => a.date === todayStr);
   const presentToday = todayAttendance.filter(a => a.status === 'Present').length;
   const attendanceRate = todayAttendance.length > 0 ? Math.round((presentToday / todayAttendance.length) * 100) : 0;
+
+  // UI Classes
+  const inputClass = "w-full p-3 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 transition text-white";
+  const btnClass = "w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold transition text-white shadow-lg";
+  const cardClass = "bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg flex flex-col gap-2 relative mb-2";
 
   if (!token) {
     return (
@@ -184,11 +201,11 @@ function App() {
         <button onClick={handleLogout} className="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-medium transition text-white">Logout</button>
       </header>
 
-      <div className="flex gap-4 mb-8 bg-slate-800/50 p-2 rounded-xl w-max border border-slate-700">
-        {['dashboard', 'students', 'teachers', 'classrooms', 'attendance'].map(tab => (
+      <div className="flex flex-wrap gap-2 mb-8 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+        {['dashboard', 'students', 'teachers', 'classrooms', 'attendance', 'subjects', 'grades'].map(tab => (
           <button 
             key={tab}
-            className={`px-6 py-2 rounded-lg capitalize font-medium transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+            className={`px-4 py-2 rounded-lg capitalize font-medium transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
             onClick={() => { setActiveTab(tab); cancelEdit(); }}
           >
             {tab}
@@ -197,60 +214,12 @@ function App() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
-                {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
-          <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
-              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Students</h4>
-              <span className="text-5xl font-extrabold text-indigo-400">{totalStudents}</span>
-            </div>
-            
-            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
-              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Teachers</h4>
-              <span className="text-5xl font-extrabold text-cyan-400">{totalTeachers}</span>
-            </div>
-            
-            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
-              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Classrooms</h4>
-              <span className="text-5xl font-extrabold text-emerald-400">{totalClassrooms}</span>
-            </div>
-            
-            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
-              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Present Today</h4>
-              <span className="text-5xl font-extrabold text-amber-400">{attendanceRate}%</span>
-            </div>
-          </div>
-        )}
         
-        {/* Forms */}
+        {/* LEFT COLUMN: FORMS */}
         <div className={`bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl h-max ${activeTab === 'dashboard' ? 'hidden' : ''}`}>
           <h3 className="text-2xl font-bold mb-6 text-indigo-300 capitalize">
-            {editId ? `Edit ${activeTab.slice(0, -1)}` : activeTab === 'attendance' ? 'Record Attendance' : `Add New ${activeTab.slice(0, -1)}`}
+            {editId ? `Edit ${activeTab.slice(0, -1)}` : activeTab === 'attendance' ? 'Record Attendance' : activeTab === 'grades' ? 'Record Grade' : `Add New ${activeTab.slice(0, -1)}`}
           </h3>
-                    {/* DASHBOARD TAB CONTENT */}
-          {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
-                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Students</h4>
-                <span className="text-5xl font-extrabold text-indigo-400">{totalStudents}</span>
-              </div>
-              
-              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
-                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Teachers</h4>
-                <span className="text-5xl font-extrabold text-cyan-400">{totalTeachers}</span>
-              </div>
-              
-              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
-                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Classrooms</h4>
-                <span className="text-5xl font-extrabold text-emerald-400">{totalClassrooms}</span>
-              </div>
-              
-              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner flex flex-col items-center justify-center">
-                <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Present Today</h4>
-                <span className="text-5xl font-extrabold text-amber-400">{attendanceRate}%</span>
-              </div>
-            </div>
-          )}
           
           {activeTab === 'students' && (
             <form onSubmit={(e) => handleSubmit(e, 'students', { first_name: firstName, last_name: lastName, date_of_birth: dob, classroom: classroom ? parseInt(classroom) : null }, () => { setFirstName(''); setLastName(''); setDob(''); setClassroom(''); }, () => fetchData('students', setStudents))} className="flex flex-col gap-4">
@@ -290,31 +259,56 @@ function App() {
             </form>
           )}
 
-          {/* ATTENDANCE FORM */}
           {activeTab === 'attendance' && (
             <form onSubmit={(e) => handleSubmit(e, 'attendance', { student: parseInt(attStudent), date: attDate, status: attStatus }, () => { setAttStudent(''); setAttStatus('Present'); }, () => fetchData('attendance', setAttendance))} className="flex flex-col gap-4">
               <select className={inputClass} value={attStudent} onChange={e => setAttStudent(e.target.value)} required>
                 <option value="">Select Student...</option>
-                {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.admission_no})</option>
-                ))}
+                {students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.admission_no})</option>)}
               </select>
-              
               <input type="date" className={inputClass} value={attDate} onChange={e => setAttDate(e.target.value)} required />
-              
               <select className={inputClass} value={attStatus} onChange={e => setAttStatus(e.target.value)} required>
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Late">Late</option>
               </select>
-
               <button type="submit" className={btnClass}>Record Attendance</button>
+            </form>
+          )}
+
+          {activeTab === 'subjects' && (
+            <form onSubmit={(e) => handleSubmit(e, 'subjects', { name: subName, code: subCode }, () => { setSubName(''); setSubCode(''); }, () => fetchData('subjects', setSubjects))} className="flex flex-col gap-4">
+              <input type="text" placeholder="Subject Name (e.g. Mathematics)" className={inputClass} value={subName} onChange={e => setSubName(e.target.value)} required />
+              <input type="text" placeholder="Subject Code (e.g. MAT101)" className={inputClass} value={subCode} onChange={e => setSubCode(e.target.value)} required />
+              <div className="flex gap-2">
+                <button type="submit" className={btnClass}>{editId ? 'Update Subject' : 'Add Subject'}</button>
+                {editId && <button type="button" onClick={cancelEdit} className="w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold transition text-white">Cancel</button>}
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'grades' && (
+            <form onSubmit={(e) => handleSubmit(e, 'grades', { student: parseInt(gStudent), subject: parseInt(gSubject), score: parseFloat(gScore), term: gTerm }, () => { setGStudent(''); setGSubject(''); setGScore(''); setGTerm('Term 1'); }, () => fetchData('grades', setGrades))} className="flex flex-col gap-4">
+              <select className={inputClass} value={gStudent} onChange={e => setGStudent(e.target.value)} required>
+                <option value="">Select Student...</option>
+                {students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
+              </select>
+              <select className={inputClass} value={gSubject} onChange={e => setGSubject(e.target.value)} required>
+                <option value="">Select Subject...</option>
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+              </select>
+              <input type="number" step="0.01" placeholder="Score (0-100)" className={inputClass} value={gScore} onChange={e => setGScore(e.target.value)} required />
+              <select className={inputClass} value={gTerm} onChange={e => setGTerm(e.target.value)}>
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+              </select>
+              <button type="submit" className={btnClass}>Record Grade</button>
             </form>
           )}
         </div>
 
-        {/* Lists */}
-        <div className={`flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-2 ${activeTab === 'dashboard' ? 'hidden' : ''}`}>
+        {/* RIGHT COLUMN: LISTS & DASHBOARD */}
+        <div className={`flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-2 ${activeTab === 'dashboard' ? 'hidden' : ''}`}>
           
           {activeTab === 'students' && students.map(s => (
             <div key={s.id} className={cardClass}>
@@ -356,7 +350,6 @@ function App() {
             </div>
           ))}
 
-          {/* ATTENDANCE LIST */}
           {activeTab === 'attendance' && attendance.map(a => (
             <div key={a.id} className={cardClass}>
               <div className="flex justify-between items-start">
@@ -372,13 +365,69 @@ function App() {
                   {a.status}
                 </span>
               </div>
+            </div>
+          ))}
+
+          {activeTab === 'subjects' && subjects.map(s => (
+            <div key={s.id} className={cardClass}>
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">{s.name}</h3>
+                <span className="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-xs font-bold border border-slate-600">{s.code}</span>
+              </div>
               <div className="absolute bottom-4 right-4 flex gap-2">
-                <button onClick={() => deleteItem('attendance', a.id, () => fetchData('attendance', setAttendance))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+                <button onClick={() => startEdit('subjects', s)} className="bg-slate-700 text-white hover:bg-indigo-600 px-3 py-1 rounded text-xs font-bold transition">Edit</button>
+                <button onClick={() => deleteItem('subjects', s.id, () => fetchData('subjects', setSubjects))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
+              </div>
+            </div>
+          ))}
+
+          {activeTab === 'grades' && grades.map(g => (
+            <div key={g.id} className={cardClass}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-white">{g.student_name}</h3>
+                  <p className="text-indigo-400 text-sm font-medium">{g.subject_name} ({g.term})</p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-2xl font-bold block ${
+                    g.letter_grade === 'A' ? 'text-green-400' : 
+                    g.letter_grade === 'B' ? 'text-blue-400' : 
+                    g.letter_grade === 'C' ? 'text-yellow-400' : 
+                    'text-red-400'
+                  }`}>{g.score}</span>
+                  <span className="text-slate-400 text-xs font-bold">Grade: {g.letter_grade}</span>
+                </div>
+              </div>
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button onClick={() => deleteItem('grades', g.id, () => fetchData('grades', setGrades))} className="bg-red-900/30 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs font-bold transition">Delete</button>
               </div>
             </div>
           ))}
 
         </div>
+
+        {/* DASHBOARD TAB */}
+        {activeTab === 'dashboard' && (
+          <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Students</h4>
+              <span className="text-5xl font-extrabold text-indigo-400">{totalStudents}</span>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Teachers</h4>
+              <span className="text-5xl font-extrabold text-cyan-400">{totalTeachers}</span>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Classrooms</h4>
+              <span className="text-5xl font-extrabold text-emerald-400">{totalClassrooms}</span>
+            </div>
+            <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col items-center justify-center">
+              <h4 className="text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Present Today</h4>
+              <span className="text-5xl font-extrabold text-amber-400">{attendanceRate}%</span>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
