@@ -19,7 +19,7 @@ Experience the application live in your browser!
 - **Username:** `Law12`
 - **Password:** `law123`
 
-*(Note: Because the backend is hosted on Render's free tier, the very first request might take 50 seconds to "wake up" the server. Be patient, it will load!)*
+
 
 ---
 
