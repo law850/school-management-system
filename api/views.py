@@ -55,11 +55,11 @@ def generate_report_card(request, student_id):
         
         p.setFillColor(colors.white)
         p.setFont("Helvetica-Bold", 28)
-        p.drawString(50, height - 60, "OFFICIAL REPORT CARD")
+        p.drawString(20, height - 70, "TIA BIDII SCHOOL OFFICIAL REPORT CARD")
         
         p.setFont("Helvetica", 12)
         p.drawString(50, height - 90, "School Management System")
-        p.drawString(50, height - 105, "Nairobi, Kenya | info@school.com")
+        p.drawString(50, height - 105, "Nairobi, Kenya | tiabidiischool@gmail.com")
 
         # --- DESIGN: STUDENT INFO BOX ---
         p.setFillColor(colors.HexColor("#f1f5f9")) # Light gray box
@@ -142,7 +142,7 @@ def generate_report_card(request, student_id):
 
         # --- FOOTER ---
         p.setFont("Helvetica-Oblique", 10)
-        p.drawString(50, 50, "This is a computer-generated document. No signature is required.")
+        p.drawString(50, 50, "Tia bidii student report  card. dev Simiyulawrence176@gmail.com")
 
         p.showPage()
         p.save()
