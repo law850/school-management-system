@@ -54,7 +54,7 @@ function App() {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/token/', {
+      const res = await fetch('https://school-management-system-wpb9.onrender.com/api/token/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -74,7 +74,7 @@ function App() {
 
   const fetchData = async (endpoint, setter) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/${endpoint}/`, {
+      const res = await fetch(`https://school-management-system-wpb9.onrender.com/api/${endpoint}/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) setter(await res.json());
@@ -109,8 +109,8 @@ function App() {
   const handleSubmit = async (e, endpoint, payload, resetFunc, fetchFunc) => {
     e.preventDefault();
     const url = editId 
-      ? `http://127.0.0.1:8000/api/${endpoint}/${editId}/` 
-      : `http://127.0.0.1:8000/api/${endpoint}/`;
+      ? `https://school-management-system-wpb9.onrender.com/api/${endpoint}/${editId}/` 
+      : `https://school-management-system-wpb9.onrender.com/api/${endpoint}/`;
     const method = editId ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
@@ -154,7 +154,7 @@ function App() {
   const deleteItem = async (endpoint, id, fetchFunc) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
     try {
-      await fetch(`http://127.0.0.1:8000/api/${endpoint}/${id}/`, {
+      await fetch(`https://school-management-system-wpb9.onrender.com/api/${endpoint}/${id}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -178,7 +178,7 @@ function App() {
 
   const downloadReportCard = async (studentId, admissionNo) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/students/${studentId}/report-card/`, {
+      const res = await fetch(`https://school-management-system-wpb9.onrender.com/api/students/${studentId}/report-card/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
